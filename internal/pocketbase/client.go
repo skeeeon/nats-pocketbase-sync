@@ -120,6 +120,9 @@ func (c *Client) GetAllMqttUsers() ([]models.MqttUser, error) {
 		return nil, fmt.Errorf("failed to create users request: %w", err)
 	}
 
+	// Create a consistent output format
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.authToken)
 
 	resp, err := c.httpClient.Do(req)

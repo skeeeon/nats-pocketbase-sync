@@ -2,7 +2,8 @@ package generator
 
 import (
 	"fmt"
-	"time"
+	"sort"
+	"strings"
 
 	"nats-pocketbase-sync/internal/models"
 	"go.uber.org/zap"
@@ -37,7 +38,6 @@ func (g *Generator) GenerateConfig(roles []models.MqttRole, users []models.MqttU
 
 	// Create data for NATS config template
 	configData := &models.NatsConfigData{
-		Timestamp:       time.Now().Format(time.RFC3339),
 		DefaultPublish:  defaultPublishStr,
 		DefaultSubscribe: defaultSubscribeStr,
 		Roles:           []models.NatsRole{},
@@ -83,6 +83,21 @@ func (g *Generator) GenerateConfig(roles []models.MqttRole, users []models.MqttU
 			RoleName: role.NormalizeRoleName(),
 			IsLast:   i == len(users)-1,
 		})
+	}
+	
+	// Sort roles by name for deterministic output
+	sort.Slice(configData.Roles, func(i, j int) bool {
+		return configData.Roles[i].Name < configData.Roles[j].Name
+	})
+
+	// Sort users by username for deterministic output
+	sort.Slice(configData.Users, func(i, j int) bool {
+		return strings.ToLower(configData.Users[i].Username) < strings.ToLower(configData.Users[j].Username)
+	})
+
+	// Update IsLast flag based on new order
+	for i := range configData.Users {
+		configData.Users[i].IsLast = (i == len(configData.Users)-1)
 	}
 
 	// Generate the NATS config

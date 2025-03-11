@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -31,8 +32,11 @@ func NewFileManager(configFile, backupDir string, logger *zap.Logger) *FileManag
 
 // HasConfigChanged checks if the provided content is different from the current config file
 func (fm *FileManager) HasConfigChanged(content string) (bool, error) {
-	// Calculate hash of the new content
-	contentHash := calculateHash(content)
+	// Normalize the new content (removing comments, whitespace, etc.)
+	normalizedNewContent := fm.NormalizeFileContent(content)
+	
+	// Calculate hash of the normalized new content
+	contentHash := calculateHash(normalizedNewContent)
 	
 	// If we already checked this content and it's unchanged, skip
 	if contentHash == fm.lastContentHash {
@@ -64,8 +68,11 @@ func (fm *FileManager) HasConfigChanged(content string) (bool, error) {
 		return false, fmt.Errorf("failed to read current config file: %w", err)
 	}
 	
-	// Calculate hash of the current content
-	currentHash := calculateHash(string(currentContent))
+	// Normalize the current content for comparison
+	normalizedCurrentContent := fm.NormalizeFileContent(string(currentContent))
+	
+	// Calculate hash of the normalized current content
+	currentHash := calculateHash(normalizedCurrentContent)
 	
 	// Check if the content has changed
 	hasChanged := currentHash != contentHash
@@ -187,6 +194,25 @@ func (fm *FileManager) ReadConfigFile() (string, error) {
 	}
 	
 	return string(content), nil
+}
+
+// NormalizeFileContent normalizes the file content for consistent comparison
+// This helps ensure that differences in whitespace or line endings don't
+// cause unnecessary config updates
+func (fm *FileManager) NormalizeFileContent(content string) string {
+	lines := strings.Split(content, "\n")
+	
+	// Remove empty lines and trim whitespace
+	var normalizedLines []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" && !strings.HasPrefix(trimmed, "#") {
+			normalizedLines = append(normalizedLines, trimmed)
+		}
+	}
+	
+	// Join and return the normalized content
+	return strings.Join(normalizedLines, "\n")
 }
 
 // CleanupOldBackups removes backups older than a certain age
