@@ -1,0 +1,22 @@
+# Application configuration
+app:
+  sync_interval: 60 # seconds
+  log_level: "debug"
+  log_file: "./sync.log"
+
+# PocketBase configuration
+pocketbase:
+  url: "http://localhost:8090"
+  admin_email: "user@email.com"
+  admin_password: "password"
+  user_collection: "mqtt_users"
+  role_collection: "mqtt_roles"
+
+# NATS configuration
+nats:
+  config_file: "/path/to/mqtt-auth.conf"
+  config_backup_dir: "/path/to/backups"
+  reload_command: "nats-server --signal reload"
+  default_permissions:
+    publish: "PUBLIC.>"
+    subscribe: ["PUBLIC.>", "_INBOX.>"]
