@@ -6,25 +6,90 @@ import (
 	"time"
 )
 
+// FlexibleTime is a custom time type that can handle various timestamp formats
+// including empty strings and space-delimited timestamps
+type FlexibleTime time.Time
+
+// UnmarshalJSON custom unmarshaler for handling various time formats from PocketBase
+func (ft *FlexibleTime) UnmarshalJSON(data []byte) error {
+	s := string(data)
+	
+	// Handle empty or null values
+	if s == "\"\"" || s == "null" {
+		*ft = FlexibleTime(time.Time{})
+		return nil
+	}
+	
+	// Remove quotes
+	s = strings.Trim(s, "\"")
+	
+	// Try standard RFC3339 format first
+	t, err := time.Parse(time.RFC3339, s)
+	if err == nil {
+		*ft = FlexibleTime(t)
+		return nil
+	}
+	
+	// Try space-delimited format with Z timezone
+	t, err = time.Parse("2006-01-02 15:04:05.999Z", s)
+	if err == nil {
+		*ft = FlexibleTime(t)
+		return nil
+	}
+	
+	// Try space-delimited format without timezone
+	t, err = time.Parse("2006-01-02 15:04:05.999", s)
+	if err == nil {
+		*ft = FlexibleTime(t)
+		return nil
+	}
+	
+	// Try space-delimited format with seconds precision
+	t, err = time.Parse("2006-01-02 15:04:05", s)
+	if err == nil {
+		*ft = FlexibleTime(t)
+		return nil
+	}
+	
+	// Try date-only format
+	t, err = time.Parse("2006-01-02", s)
+	if err == nil {
+		*ft = FlexibleTime(t)
+		return nil
+	}
+	
+	// If all parsing attempts fail, return the last error
+	return err
+}
+
+// Time returns the underlying time.Time value
+func (ft FlexibleTime) Time() time.Time {
+	return time.Time(ft)
+}
+
 // MqttUser represents a user in the PocketBase MQTT users collection
 type MqttUser struct {
-	ID         string    `json:"id"`
-	Username   string    `json:"username"`
-	Password   string    `json:"password"`
-	RoleID     string    `json:"role_id"`
-	Active     bool      `json:"active"`
-	CreatedAt  time.Time `json:"created"`
-	UpdatedAt  time.Time `json:"updated"`
+	ID              string        `json:"id"`
+	Username        string        `json:"username"`
+	Password        string        `json:"password"`
+	RoleID          string        `json:"role_id"`
+	Active          bool          `json:"active"`
+	CollectionID    string        `json:"collectionId,omitempty"`
+	CollectionName  string        `json:"collectionName,omitempty"`
+	Created         FlexibleTime  `json:"created"`
+	Updated         FlexibleTime  `json:"updated"`
 }
 
 // MqttRole represents a role in the PocketBase MQTT roles collection
 type MqttRole struct {
-	ID                  string          `json:"id"`
-	Name                string          `json:"name"`
-	PublishPermissions  json.RawMessage `json:"publish_permissions"`
+	ID                   string        `json:"id"`
+	Name                 string        `json:"name"`
+	PublishPermissions   json.RawMessage `json:"publish_permissions"`
 	SubscribePermissions json.RawMessage `json:"subscribe_permissions"`
-	CreatedAt           time.Time       `json:"created"`
-	UpdatedAt           time.Time       `json:"updated"`
+	CollectionID         string        `json:"collectionId,omitempty"`
+	CollectionName       string        `json:"collectionName,omitempty"`
+	Created              FlexibleTime  `json:"created"`
+	Updated              FlexibleTime  `json:"updated"`
 }
 
 // PocketBaseListResponse represents a generic list response from PocketBase
